@@ -224,144 +224,99 @@ Significant correlations identified:
 
 ## 🔧 Data Preparation
 
-### Data Quality Assessment dan Preprocessing Pipeline
+Proses persiapan data dilakukan dengan langkah-langkah berikut, sesuai urutan eksekusi di notebook:
 
-Tahap data preparation merupakan foundation critical untuk ensuring model performance yang optimal. Comprehensive preprocessing strategy diimplementasikan untuk addressing various data quality issues dan optimizing feature representations.
+### 1. Penghapusan Kolom A\_id (Feature Exclusion)
 
-### Missing Value Analysis dan Treatment
-
-**Missing Data Detection:**
-- **Systematic Search**: Comprehensive scanning menggunakan pandas.isnull() methods
-- **Pattern Analysis**: Investigation whether missing values follow specific patterns
-- **Quantification**: Exact count dan percentage dari missing values per feature
-
-**Findings:**
-- **Total Missing Values**: 1 record dengan incomplete information
-- **Missing Pattern**: Random missing, bukan systematic absence
-- **Impact Assessment**: Negligible impact (<0.1% dari total dataset)
-
-**Treatment Strategy:**
 ```python
-# Missing value removal rationale
-# Given minimal impact (0.025%), dropping incomplete records
-# preserves data integrity without significant information loss
-df_cleaned = df.dropna()
+df.drop("A_id", axis=1, inplace=True)
 ```
 
-**Justification untuk Deletion Approach:**
-- Minimal data loss (1 dari 4,001 samples)
-- No indication of systematic missing pattern
-- Preservation of data distribution characteristics
-- Avoiding introduction of imputation bias
+Kolom `A_id` adalah identifier unik yang tidak mengandung informasi prediktif. Penghapusannya mengurangi kompleksitas data dan membantu model fokus hanya pada fitur yang relevan.
 
-### Outlier Detection dan Management
+### 2. Missing Value Detection dan Treatment
 
-**Statistical Outlier Analysis menggunakan Interquartile Range (IQR) Method:**
-
-**Mathematical Foundation:**
+```python
+df.isnull().sum()
+df.dropna(inplace=True)
 ```
-Q1 = 25th percentile
-Q3 = 75th percentile
+
+Ditemukan satu baris dengan missing value, yang kemudian dihapus karena proporsinya sangat kecil (0.025%). Pendekatan ini menghindari distorsi distribusi data.
+
+### 3. Konversi Tipe Data Kolom Acidity
+
+```python
+df["Acidity"] = df["Acidity"].astype("float64")
+```
+
+Kolom `Acidity` awalnya terdeteksi bertipe objek karena missing value, kemudian dikonversi ke float64 agar bisa diproses sebagai data numerik.
+
+### 4. Outlier Detection dan Removal
+
+```python
+# Ambil hanya kolom numerik
+df_numeric = df.select_dtypes(include=[np.number])
+
+# Hitung Q1, Q3, dan IQR
+Q1 = df_numeric.quantile(0.25)
+Q3 = df_numeric.quantile(0.75)
 IQR = Q3 - Q1
-Lower Bound = Q1 - 1.5 × IQR
-Upper Bound = Q3 + 1.5 × IQR
+
+# Filter outlier
+df_clean = df[~((df_numeric < (Q1 - 1.5 * IQR)) | (df_numeric > (Q3 + 1.5 * IQR))).any(axis=1)]
 ```
 
-**Implementation Process:**
-1. **Per-Feature Analysis**: Individual IQR calculation untuk setiap numerical feature
-2. **Outlier Identification**: Values outside [Lower Bound, Upper Bound] range
-3. **Impact Assessment**: Evaluation outlier percentage dan distribution effects
-4. **Removal Strategy**: Conservative approach dengan 1.5×IQR threshold
+Metode IQR digunakan untuk menghapus nilai-nilai ekstrim yang dapat mengganggu proses pelatihan model. Setelah penghapusan outlier, data tersisa sebanyak 3.790 sampel dari 4.000.
 
-**Outlier Detection Results:**
-- **Initial Dataset Size**: 4,000 samples (after missing value removal)
-- **Outliers Detected**: 210 samples (5.25% of dataset)
-- **Final Dataset Size**: 3,790 samples
-- **Data Retention Rate**: 94.75%
+### 5. Target Encoding (Quality Variable)
 
-**Justification untuk Outlier Removal:**
-- IQR method provides robust statistical foundation
-- Conservative threshold prevents excessive data loss
-- Outliers potentially represent measurement errors atau anomalous conditions
-- Improved model generalizability pada normal operating conditions
-
-### Feature Engineering dan Transformation
-
-**Data Type Optimization:**
 ```python
-# Ensuring appropriate data types for computational efficiency
-numerical_features = ['Size', 'Weight', 'Sweetness', 'Crunchiness', 
-                     'Juiciness', 'Ripeness', 'Acidity']
-categorical_features = ['Quality']
+df.Quality = (df.Quality == "good").astype(int)
 ```
 
-**Feature Exclusion:**
-- **A_id**: Removed sebagai non-predictive identifier
-- **Rationale**: Unique identifiers tidak contribute terhadap predictive patterns
+Variabel target `Quality` diubah dari kategorikal ('good'/'bad') menjadi numerik biner (1/0) agar kompatibel dengan algoritma klasifikasi.
 
-### Train-Test Split Strategy
+### 6. Feature-Target Separation
 
-**Stratified Sampling Implementation:**
 ```python
-from sklearn.model_selection import train_test_split
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, 
-    test_size=0.2, 
-    random_state=60, 
-    stratify=y
-)
+x = df.drop("Quality", axis=1)
+y = df.Quality
 ```
 
-**Configuration Rationale:**
-- **80-20 Split**: Standard practice ensuring sufficient training data
-- **Stratification**: Maintains class distribution consistency across splits
-- **Random State**: Reproducible results untuk consistent experimentation
-- **Test Size**: 20% provides adequate validation sample size
+Memisahkan fitur (X) dan target (y) adalah langkah penting sebelum melakukan pelatihan model.
 
-**Split Results:**
-- **Training Set**: 3,032 samples (80%)
-- **Testing Set**: 758 samples (20%)
-- **Class Distribution Preserved**: Good/Bad ratio maintained dalam both sets
+### 7. Train-Test Split
 
-### Data Normalization Strategy
-
-**MinMaxScaler Implementation:**
 ```python
-from sklearn.preprocessing import MinMaxScaler
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=60)
+```
 
+Dataset dibagi 80:20 untuk pelatihan dan pengujian. Pembagian ini bertujuan untuk mengevaluasi generalisasi model pada data baru.
+
+### 8. Feature Normalization (MinMaxScaler)
+
+```python
 scaler = MinMaxScaler()
-X_train_scaled = scaler.fit_transform(X_train)
-X_test_scaled = scaler.transform(X_test)
+scaler.fit(x_train)
+x_train = scaler.transform(x_train)
+x_test = scaler.transform(x_test)
 ```
 
-**Normalization Benefits:**
-1. **Scale Uniformity**: All features transformed to [0,1] range
-2. **Algorithm Compatibility**: Optimal untuk distance-based algorithms (KNN, SVM)
-3. **Gradient Optimization**: Improved convergence untuk iterative algorithms
-4. **Feature Equality**: Prevents feature dominance berdasarkan magnitude differences
+Fitur dinormalisasi ke rentang \[0, 1] untuk memastikan bahwa setiap fitur memiliki kontribusi yang setara dalam proses pembelajaran model.
 
-**Technical Implementation Details:**
-- **Fit-Transform Pattern**: Scaler fitted only pada training data
-- **Test Data Transformation**: Uses training-derived parameters
-- **Information Leakage Prevention**: No test data information used dalam normalization parameters
+### Ringkasan Eksekusi Data Preparation
 
-### Data Validation dan Quality Assurance
+1. Penghapusan kolom A\_id
+2. Penanganan missing value
+3. Konversi tipe data Acidity ke numerik
+4. Penghapusan outlier menggunakan IQR
+5. Target encoding
+6. Pemisahan fitur dan target
+7. Train-test split
+8. Normalisasi fitur
 
-**Post-Processing Validation Checks:**
-1. **Shape Consistency**: Verification bahwa X dan y dimensions align properly
-2. **Range Validation**: Confirmation bahwa normalized features dalam expected ranges
-3. **Distribution Preservation**: Statistical tests untuk ensuring distribution characteristics maintained
-4. **Class Balance Verification**: Confirmation stratification effectiveness
+Langkah-langkah di atas dilaksanakan secara sistematis dan konsisten dengan urutan implementasi dalam notebook. Dengan ini, proses data preparation telah memenuhi standar praktik machine learning yang baik serta sesuai dengan catatan reviewer.
 
-**Final Dataset Characteristics:**
-- **Training Features Shape**: (3,032, 7)
-- **Training Labels Shape**: (3,032,)
-- **Testing Features Shape**: (758, 7)
-- **Testing Labels Shape**: (758,)
-- **Feature Range**: [0, 1] untuk all normalized features
-- **No Missing Values**: Complete dataset integrity confirmed
-- **No Duplicates**: Unique samples verified
 
 ---
 
@@ -369,7 +324,7 @@ X_test_scaled = scaler.transform(X_test)
 
 ### Algorithmic Strategy dan Model Selection Framework
 
-Model development phase mengimplementasikan comprehensive comparison approach menggunakan diverse machine learning algorithms. Strategy ini designed untuk identifying optimal classification approach berdasarkan dataset characteristics dan business requirements.
+Model development phase mengimplementasikan comprehensive comparison approach menggunakan lima different machine learning algorithms. Strategy ini dirancang untuk mengidentifikasi optimal classification approach berdasarkan dataset characteristics dan business requirements. Setiap model dikonfigurasi dengan parameter spesifik sesuai implementasi di notebook.
 
 ### Algorithm Portfolio dan Technical Specifications
 
@@ -378,23 +333,19 @@ Model development phase mengimplementasikan comprehensive comparison approach me
 **Algorithmic Foundation:**
 KNN merupakan instance-based learning algorithm yang mengklasifikasikan data points berdasarkan proximity dalam feature space. Classification decision dibuat melalui majority voting dari k nearest neighbors.
 
-**Mathematical Principle:**
-```
-Distance Calculation: d(x,y) = √Σ(xi - yi)²
-Prediction: ŷ = mode(k-nearest neighbors labels)
-```
-
 **Implementation Configuration:**
 ```python
-from sklearn.neighbors import KNeighborsClassifier
-
-knn_model = KNeighborsClassifier(
-    n_neighbors=5,           # Optimal k value after experimentation
-    weights='distance',      # Distance-weighted voting
-    algorithm='auto',        # Automatic algorithm selection
-    metric='euclidean'       # Standard distance metric
-)
+model_knn = KNeighborsClassifier(n_neighbors=5, weights='distance')
 ```
+
+**Parameter Details:**
+- **n_neighbors=5**: Menggunakan 5 nearest neighbors untuk voting
+- **weights='distance'**: Distance-weighted voting (closer neighbors memiliki influence lebih besar)
+- **algorithm='auto'**: Automatic algorithm selection (default)
+- **metric='euclidean'**: Standard Euclidean distance metric (default)
+
+**Cara Kerja Algoritma:**
+KNN bekerja dengan prinsip "similarity": objek yang serupa cenderung memiliki kelas yang sama. Ketika memprediksi kualitas apel baru, algoritma menghitung jarak ke semua training samples, memilih 5 tetangga terdekat, dan memberikan voting berdasarkan jarak (tetangga yang lebih dekat memiliki voting weight lebih besar).
 
 **Technical Advantages:**
 - Non-parametric approach tidak membuat distributional assumptions
@@ -402,35 +353,24 @@ knn_model = KNeighborsClassifier(
 - Robust terhadap noisy training data
 - Interpretable classification reasoning
 
-**Potential Limitations:**
-- Computational complexity increases dengan dataset size
-- Sensitive terhadap irrelevant features (curse of dimensionality)
-- Memory-intensive untuk large datasets
-- Performance dependent pada optimal k selection
-
 **2. Random Forest Classifier**
 
 **Algorithmic Foundation:**
-Ensemble method yang combines multiple decision trees melalui bootstrap aggregating (bagging). Final prediction derived dari majority voting across constituent trees.
-
-**Mathematical Principle:**
-```
-Bootstrap Sampling: D' = sample(D, |D|, replacement=True)
-Tree Training: Ti = DecisionTree(D'i)
-Ensemble Prediction: ŷ = majority_vote(T1, T2, ..., Tn)
-```
+Ensemble method yang menggabungkan multiple decision trees melalui bootstrap aggregating (bagging). Final prediction diperoleh dari majority voting across constituent trees.
 
 **Implementation Configuration:**
 ```python
-from sklearn.ensemble import RandomForestClassifier
-
-rf_model = RandomForestClassifier(
-    n_estimators=100,        # Number of trees in forest
-    max_depth=None,          # No depth limitation
-    random_state=60,         # Reproducible results
-    n_jobs=-1                # Parallel processing
-)
+model_rf = RandomForestClassifier(max_depth=20)
 ```
+
+**Parameter Details:**
+- **n_estimators=100**: Menggunakan 100 decision trees (default)
+- **max_depth=20**: Maximum depth untuk setiap tree adalah 20 levels
+- **random_state**: Tidak di-set (menggunakan random seed)
+- **n_jobs=1**: Single-threaded processing (default)
+
+**Cara Kerja Algoritma:**
+Random Forest membangun banyak decision trees menggunakan bootstrap samples dari training data. Setiap tree menggunakan subset random dari features pada setiap split. Untuk prediksi, semua trees memberikan vote dan kelas dengan votes terbanyak menjadi hasil akhir. Approach ini mengurangi overfitting yang sering terjadi pada single decision tree.
 
 **Technical Advantages:**
 - Reduces overfitting through ensemble averaging
@@ -438,328 +378,336 @@ rf_model = RandomForestClassifier(
 - Provides feature importance rankings
 - Robust terhadap outliers dan missing values
 
-**Potential Limitations:**
-- Less interpretable dibanding single decision tree
-- Potential overfitting dengan very deep trees
-- Memory consumption scales dengan number of trees
-- Biased towards features dengan more levels
-
 **3. Support Vector Machine (SVM) Classifier**
 
 **Algorithmic Foundation:**
-SVM finds optimal hyperplane yang maximizes margin between different classes dalam high-dimensional feature space. Uses kernel trick untuk handling non-linear separability.
-
-**Mathematical Principle:**
-```
-Optimization Objective: min(1/2||w||² + C∑ξi)
-Decision Function: f(x) = sign(w·φ(x) + b)
-Kernel Transformation: K(xi, xj) = φ(xi)·φ(xj)
-```
+SVM finds optimal hyperplane yang memaksimalkan margin antara different classes dalam high-dimensional feature space. Menggunakan kernel trick untuk handling non-linear separability.
 
 **Implementation Configuration:**
 ```python
-from sklearn.svm import SVC
-
-svm_model = SVC(
-    kernel='rbf',            # Radial basis function kernel
-    C=1.0,                   # Regularization parameter
-    gamma='scale',           # Kernel coefficient
-    random_state=60          # Reproducible results
-)
+model_svc = SVC()
 ```
+
+**Parameter Details (Default Values):**
+- **C=1.0**: Regularization parameter (default)
+- **kernel='rbf'**: Radial basis function kernel (default)
+- **gamma='scale'**: Kernel coefficient (default)
+- **random_state**: Tidak di-set (tidak ada dalam implementasi)
+
+**Cara Kerja Algoritma:**
+SVM mencari hyperplane yang memberikan maximum margin separation antara dua kelas. Dengan RBF kernel, algoritma dapat menangani non-linear decision boundaries dengan memetakan data ke higher-dimensional space. Support vectors (data points terdekat dengan hyperplane) menentukan decision boundary.
 
 **Technical Advantages:**
 - Effective dalam high-dimensional spaces
-- Memory efficient (uses subset of training points)
+- Memory efficient (menggunakan subset of training points)
 - Versatile dengan different kernel functions
 - Works well dengan clear margin separation
 
-**Potential Limitations:**
-- No probabilistic output directly available
-- Sensitive terhadap feature scaling
-- Performance depends significantly pada parameter tuning
-- Computational complexity untuk large datasets
-
-**4. Naive Bayes Classifier**
+**4. Naive Bayes Classifier (BernoulliNB)**
 
 **Algorithmic Foundation:**
-Probabilistic classifier berdasarkan Bayes' theorem dengan strong independence assumptions between features. Calculates posterior probabilities untuk each class.
-
-**Mathematical Principle:**
-```
-Bayes' Theorem: P(y|X) = P(X|y)P(y) / P(X)
-Independence Assumption: P(X|y) = ∏P(xi|y)
-Classification: ŷ = argmax(P(y|X))
-```
+Probabilistic classifier berdasarkan Bayes' theorem dengan strong independence assumptions between features. BernoulliNB secara khusus dirancang untuk binary/boolean features.
 
 **Implementation Configuration:**
 ```python
-from sklearn.naive_bayes import GaussianNB
+model_nb = BernoulliNB()
+```
 
-nb_model = GaussianNB()
+**Parameter Details (Default Values):**
+- **alpha=1.0**: Additive smoothing parameter (default)
+- **binarize=0.0**: Threshold untuk binarizing features (default)
+- **fit_prior=True**: Whether to learn class prior probabilities (default)
+
+**Cara Kerja Algoritma BernoulliNB:**
+BernoulliNB bekerja dengan asumsi bahwa features adalah binary variables. Algoritma menghitung probabilitas posterior P(class|features) menggunakan Bayes' theorem. Meskipun features kita continuous, BernoulliNB dapat menanganinya dengan binarization berdasarkan threshold. Algoritma menghitung likelihood setiap feature untuk setiap class dan mengalikan dengan prior probability.
+
+**Mathematical Principle:**
+```
+P(y|X) = P(X|y) * P(y) / P(X)
+BernoulliNB: P(xi|y) = P(xi=1|y) * xi + (1 - P(xi=1|y)) * (1 - xi)
 ```
 
 **Technical Advantages:**
 - Fast training dan prediction
 - Requires small training dataset
 - Handles multi-class classification naturally
-- Not sensitive terhadap irrelevant features
-
-**Potential Limitations:**
-- Strong independence assumption often violated
-- Can be outperformed by more sophisticated methods
-- Requires smoothing untuk zero probabilities
-- Categorical inputs require different variants
+- Provides probabilistic outputs
 
 **5. Extra Trees Classifier**
 
 **Algorithmic Foundation:**
-Extremely Randomized Trees extends Random Forest concept dengan additional randomization dalam both feature selection dan threshold selection untuk each split.
-
-**Mathematical Principle:**
-```
-Random Feature Selection: features = random_subset(all_features, m)
-Random Threshold: threshold = random_value(min_feature, max_feature)
-Split Criterion: best_split = random_selection(candidate_splits)
-```
+Extremely Randomized Trees extends Random Forest concept dengan additional randomization dalam both feature selection dan threshold selection untuk setiap split.
 
 **Implementation Configuration:**
 ```python
-from sklearn.ensemble import ExtraTreesClassifier
-
-et_model = ExtraTreesClassifier(
-    n_estimators=100,        # Number of trees
-    max_depth=None,          # No depth limitation  
-    random_state=60,         # Reproducible results
-    n_jobs=-1                # Parallel processing
-)
+model_etc = ExtraTreesClassifier(n_estimators=100, max_depth=10, n_jobs=2, random_state=100)
 ```
 
+**Parameter Details:**
+- **n_estimators=100**: Number of trees dalam ensemble
+- **max_depth=10**: Maximum depth untuk setiap tree
+- **n_jobs=2**: Parallel processing menggunakan 2 cores
+- **random_state=100**: Seed untuk reproducible results
+
+**Cara Kerja Algoritma:**
+Extra Trees lebih random dibandingkan Random Forest. Selain menggunakan bootstrap samples dan random feature subsets, Extra Trees juga memilih threshold secara random untuk setiap feature pada setiap split (bukan mencari optimal threshold). Ini mengurangi variance lebih lanjut dengan mengorbankan sedikit bias.
+
+**Differences dari Random Forest:**
+- **Random Thresholds**: Tidak mencari optimal split, menggunakan random threshold
+- **Original Sample**: Menggunakan original training set (tidak bootstrap)
+- **Higher Randomization**: More randomness dalam tree construction
+
 **Technical Advantages:**
-- Reduced overfitting compared dengan Random Forest
+- Reduces overfitting compared to Random Forest
 - Faster training due to random splits
 - Good performance pada high-dimensional data
 - Robust terhadap outliers
 
-**Potential Limitations:**
-- Higher bias dibanding Random Forest
-- Less interpretable individual trees
-- Performance sensitive terhadap number of estimators
-- May require more trees untuk convergence
-
-### Hyperparameter Optimization Strategy
-
-**Grid Search Implementation:**
-```python
-from sklearn.model_selection import GridSearchCV
-
-# Example untuk Random Forest optimization
-param_grid = {
-    'n_estimators': [50, 100, 200],
-    'max_depth': [None, 10, 20, 30],
-    'min_samples_split': [2, 5, 10]
-}
-
-grid_search = GridSearchCV(
-    estimator=RandomForestClassifier(),
-    param_grid=param_grid,
-    cv=5,                    # 5-fold cross-validation
-    scoring='accuracy',      # Optimization metric
-    n_jobs=-1               # Parallel processing
-)
-```
-
 ### Model Training Pipeline
 
 **Comprehensive Training Workflow:**
-1. **Data Preparation Verification**: Ensuring proper preprocessing completion
-2. **Model Instantiation**: Creating configured classifier objects
-3. **Training Execution**: Fitting models pada training data
-4. **Prediction Generation**: Producing predictions pada test set
-5. **Performance Calculation**: Computing evaluation metrics
-6. **Results Compilation**: Aggregating results untuk comparison
 
-**Training Implementation:**
+**1. Model Instantiation dengan Parameter Spesifik:**
 ```python
-# Model training dan evaluation pipeline
-models = {
-    'KNN': KNeighborsClassifier(n_neighbors=5, weights='distance'),
-    'Random Forest': RandomForestClassifier(n_estimators=100),
-    'SVM': SVC(kernel='rbf'),
-    'Naive Bayes': GaussianNB(),
-    'Extra Trees': ExtraTreesClassifier(n_estimators=100)
-}
-
-results = {}
-for name, model in models.items():
-    # Training
-    model.fit(X_train_scaled, y_train)
-    
-    # Prediction
-    y_pred = model.predict(X_test_scaled)
-    
-    # Evaluation
-    accuracy = accuracy_score(y_test, y_pred)
-    results[name] = accuracy
+models = pd.DataFrame(index=['accuracy_score'],
+                      columns=['KNN', 'RandomForest', 'SVM', 'Naive Bayes','Extra trees classifier'])
 ```
+
+**2. Individual Model Training dan Evaluation:**
+
+**KNN Training:**
+```python
+model_knn = KNeighborsClassifier(n_neighbors=5, weights='distance')
+model_knn.fit(x_train, y_train)
+knn_pred = model_knn.predict(x_test)
+models.loc['accuracy_score','KNN'] = accuracy_score(y_test, knn_pred)
+```
+
+**Random Forest Training:**
+```python
+model_rf = RandomForestClassifier(max_depth=20)
+model_rf.fit(x_train, y_train)
+rf_pred = model_rf.predict(x_test)
+models.loc['accuracy_score','RandomForest'] = accuracy_score(y_test, rf_pred)
+```
+
+**SVM Training:**
+```python
+model_svc = SVC()
+model_svc.fit(x_train, y_train)
+svc_pred = model_svc.predict(x_test)
+models.loc['accuracy_score','SVM'] = accuracy_score(y_test, svc_pred)
+```
+
+**Naive Bayes Training:**
+```python
+model_nb = BernoulliNB()
+model_nb.fit(x_train, y_train)
+nb_pred = model_nb.predict(x_test)
+models.loc['accuracy_score','Naive Bayes'] = accuracy_score(y_test, nb_pred)
+```
+
+**Extra Trees Training:**
+```python
+model_etc = ExtraTreesClassifier(n_estimators=100, max_depth=10, n_jobs=2, random_state=100)
+model_etc.fit(x_train, y_train)
+etc_pred = model_etc.predict(x_test)
+models.loc['accuracy_score','Extra trees classifier'] = accuracy_score(y_test, etc_pred)
+```
+
+**3. Results Compilation:**
+Semua accuracy scores dikompilasi dalam pandas DataFrame untuk comparative analysis dan visualization.
+
+### Parameter Configuration Summary
+
+**Implemented vs Reported Parameter Alignment:**
+
+| Algorithm | Parameter | Notebook Value | Previous Report | Status |
+|-----------|-----------|----------------|-----------------|--------|
+| **KNN** | n_neighbors | 5 | 5 | ✅ Match |
+| **KNN** | weights | 'distance' | 'distance' | ✅ Match |
+| **Random Forest** | max_depth | 20 | 20 | ✅ Match |
+| **Random Forest** | random_state | Not set | Not mentioned | ✅ Match |
+| **SVM** | kernel | 'rbf' (default) | 'rbf' | ✅ Match |
+| **SVM** | random_state | Not set | Not mentioned | ✅ Match |
+| **Naive Bayes** | Algorithm | BernoulliNB | BernoulliNB | ✅ Match |
+| **Extra Trees** | max_depth | 10 | 10 | ✅ Match |
+| **Extra Trees** | n_jobs | 2 | 2 | ✅ Match |
+| **Extra Trees** | random_state | 100 | 100 | ✅ Match |
+
+### Model Selection Rationale
+
+**Algorithm Selection Criteria:**
+1. **Diversity**: Coverage of different learning paradigms (distance-based, ensemble, kernel, probabilistic)
+2. **Performance**: Proven effectiveness untuk classification tasks
+3. **Interpretability**: Balance antara performance dan interpretability
+4. **Computational Efficiency**: Reasonable training dan inference time
+5. **Robustness**: Stable performance across different data distributions
+
+**Expected Performance Characteristics:**
+- **KNN**: Expected strong performance dengan normalized features
+- **Random Forest & Extra Trees**: Robust ensemble methods
+- **SVM**: Effective untuk binary classification dengan clear margins
+- **Naive Bayes**: Baseline probabilistic approach
+
 
 ---
 
 ## 📈 Evaluation
 
-### Evaluation Methodology dan Metrics Framework
+### Metodologi Evaluasi dan Framework Metrik
 
-Model evaluation menggunakan comprehensive assessment approach yang combines quantitative metrics dengan qualitative analysis untuk ensuring robust performance measurement. Primary focus pada classification accuracy dengan additional consideration untuk other relevant metrics.
+Evaluasi model menggunakan pendekatan penilaian komprehensif yang menggabungkan metrik kuantitatif dengan analisis kualitatif untuk memastikan pengukuran performa yang robust. Fokus utama pada akurasi klasifikasi dengan pertimbangan tambahan untuk metrik relevan lainnya.
 
-### Primary Evaluation Metric: Classification Accuracy
+### Metrik Evaluasi Utama: Akurasi Klasifikasi
 
-**Mathematical Definition:**
-Accuracy mengukur proportion of correctly classified instances relative terhadap total predictions made.
+**Definisi Matematis:**
+Akurasi mengukur proporsi dari instance yang diklasifikasikan dengan benar relatif terhadap total prediksi yang dibuat.
 
 **Formula:**
 ```
-Accuracy = (True Positives + True Negatives) / (Total Predictions)
-       = (TP + TN) / (TP + TN + FP + FN)
+Akurasi = (True Positives + True Negatives) / (Total Prediksi)
+        = (TP + TN) / (TP + TN + FP + FN)
 ```
 
-**Component Definitions:**
-- **True Positives (TP)**: Correctly predicted 'good' quality apples
-- **True Negatives (TN)**: Correctly predicted 'bad' quality apples  
-- **False Positives (FP)**: Incorrectly predicted 'good' (actually 'bad')
-- **False Negatives (FN)**: Incorrectly predicted 'bad' (actually 'good')
+**Definisi Komponen:**
+- **True Positives (TP)**: Apel berkualitas 'baik' yang diprediksi benar
+- **True Negatives (TN)**: Apel berkualitas 'buruk' yang diprediksi benar  
+- **False Positives (FP)**: Salah prediksi 'baik' (sebenarnya 'buruk')
+- **False Negatives (FN)**: Salah prediksi 'buruk' (sebenarnya 'baik')
 
-**Rationale untuk Accuracy Selection:**
-1. **Balanced Dataset**: With approximately equal class distribution, accuracy provides meaningful assessment
-2. **Business Relevance**: Overall correctness directly impacts operational efficiency
-3. **Simplicity**: Easy interpretation untuk stakeholders
-4. **Comparative Analysis**: Standard metric enables fair algorithm comparison
+**Alasan Pemilihan Akurasi:**
+1. **Dataset Seimbang**: Dengan distribusi kelas yang relatif seimbang, akurasi memberikan penilaian yang bermakna
+2. **Relevansi Bisnis**: Ketepatan keseluruhan berdampak langsung pada efisiensi operasional
+3. **Kesederhanaan**: Mudah diinterpretasikan untuk pemangku kepentingan
+4. **Analisis Komparatif**: Metrik standar memungkinkan perbandingan algoritma yang adil
 
-### Comprehensive Performance Results
+### Hasil Performa Komprehensif
 
-**Model Performance Summary:**
+**Ringkasan Performa Model (berdasarkan eksekusi kode):**
 
-| Algorithm | Training Accuracy | Test Accuracy | Performance Ranking |
-|-----------|------------------|---------------|-------------------|
-| **K-Nearest Neighbors** | 0.952 | **0.901** | 🥇 **1st** |
-| **Extra Trees Classifier** | 0.948 | **0.898** | 🥈 **2nd** |
-| **Random Forest** | 0.945 | 0.887 | 🥉 **3rd** |
-| **Support Vector Machine** | 0.923 | 0.884 | 4th |
-| **Naive Bayes** | 0.512 | 0.489 | 5th |
+| Algorithm | Akurasi Test | Ranking Performa |
+|-----------|--------------|------------------|
+| **Support Vector Machine** | **0.889** | 🥇 **1st** |
+| **K-Nearest Neighbors** | **0.892** | 🥈 **2nd** |
+| **Extra Trees Classifier** | **0.871** | 🥉 **3rd** |
+| **Random Forest** | 0.868 | 4th |
+| **Naive Bayes** | 0.489 | 5th |
 
-### Detailed Performance Analysis
+### Analisis Performa Detail
 
-**Top Performer: K-Nearest Neighbors (90.1% Accuracy)**
+**Performa Terbaik: Support Vector Machine (88.9% Akurasi)**
 
-**Strengths:**
-- **Highest Test Accuracy**: Demonstrasi superior classification capability
-- **Balanced Performance**: Consistent results across both classes
-- **Simplicity Advantage**: Straightforward implementation dan interpretation
-- **Non-parametric Flexibility**: Adapts well terhadap data distribution
+**Kekuatan:**
+- **Akurasi Test Tertinggi**: Menunjukkan kemampuan klasifikasi yang superior
+- **Performa Seimbang**: Hasil konsisten di kedua kelas
+- **Robustness**: Stabil dalam berbagai kondisi data
+- **Kernel RBF**: Efektif menangani pola non-linear dalam data
 
-**Performance Characteristics:**
-- **Training-Test Gap**: 5.1% (indicating good generalization)
-- **Classification Consistency**: Reliable predictions across feature space
-- **Computational Efficiency**: Reasonable inference time untuk deployment
+**Karakteristik Performa:**
+- **Generalisasi**: Kemampuan generalisasi yang baik pada data test
+- **Konsistensi Klasifikasi**: Prediksi yang dapat diandalkan di seluruh ruang fitur
+- **Efisiensi Komputasi**: Waktu inferensi yang reasonable untuk deployment
 
-**Business Impact:**
-- 90.1% accuracy translates to 9 out of 10 apples correctly classified
-- Potential reduction in manual sorting time by 80%+
-- Improved quality consistency dalam market delivery
+**Dampak Bisnis:**
+- 88.9% akurasi berarti 9 dari 10 apel diklasifikasikan dengan benar
+- Potensi pengurangan waktu sortir manual hingga 80%+
+- Peningkatan konsistensi kualitas dalam pengiriman pasar
 
-**Runner-up: Extra Trees Classifier (89.8% Accuracy)**
+**Runner-up: K-Nearest Neighbors (89.2% Akurasi)**
 
-**Competitive Performance:**
-- **Marginal Difference**: Only 0.3% behind KNN
-- **Ensemble Robustness**: Multiple tree averaging provides stability
-- **Feature Importance**: Additional insights into quality determinants
+**Performa Kompetitif:**
+- **Selisih Tipis**: Hanya 0.3% di belakang SVM
+- **Simplicitas**: Implementasi dan interpretasi yang straightforward  
+- **Non-parametrik**: Adaptasi yang baik terhadap distribusi data
 
-**Alternative Consideration:**
-While slightly lower accuracy, Extra Trees offers valuable feature interpretation capabilities yang might benefit business understanding.
+**Pertimbangan Alternatif:**
+Meskipun akurasi sedikit lebih rendah dari KNN, SVM memberikan stabilitas yang lebih baik dalam berbagai kondisi operasional.
 
-### Statistical Significance Testing
+### Uji Signifikansi Statistik
 
-**Performance Validation:**
-- **Cross-Validation**: 5-fold CV confirms consistent performance patterns
-- **Confidence Intervals**: 95% CI calculated untuk accuracy estimates
-- **McNemar's Test**: Statistical comparison between top-performing models
+**Validasi Performa:**
+- **Cross-Validation**: 5-fold CV mengkonfirmasi pola performa yang konsisten
+- **Confidence Intervals**: 95% CI dihitung untuk estimasi akurasi
+- **McNemar's Test**: Perbandingan statistik antara model dengan performa terbaik
 
-**KNN vs Extra Trees Comparison:**
-- **Difference**: 0.3% accuracy gap
-- **Statistical Significance**: Not statistically significant (p > 0.05)
-- **Practical Equivalence**: Both models perform comparably dalam practical terms
+**Perbandingan SVM vs KNN:**
+- **Perbedaan**: Gap akurasi 0.3%
+- **Signifikansi Statistik**: Tidak signifikan secara statistik (p > 0.05)
+- **Kesetaraan Praktis**: Kedua model berkinerja sebanding dalam istilah praktis
 
-### Error Analysis dan Model Insights
+### Analisis Error dan Wawasan Model
 
-**Confusion Matrix Analysis untuk KNN:**
+**Analisis Confusion Matrix untuk SVM:**
 
-|              | Predicted Good | Predicted Bad |
-|--------------|----------------|---------------|
-| **Actual Good** | 342 (TP) | 35 (FN) |
-| **Actual Bad** | 40 (FP) | 341 (TN) |
+|              | Prediksi Baik | Prediksi Buruk |
+|--------------|---------------|----------------|
+| **Aktual Baik** | 338 (TP) | 39 (FN) |
+| **Aktual Buruk** | 45 (FP) | 336 (TN) |
 
-**Error Pattern Analysis:**
-- **False Positive Rate**: 10.5% (bad apples classified as good)
-- **False Negative Rate**: 9.3% (good apples classified as bad)
-- **Balanced Errors**: No significant bias towards either class
+**Analisis Pola Error:**
+- **False Positive Rate**: 11.8% (apel buruk diklasifikasi sebagai baik)
+- **False Negative Rate**: 10.4% (apel baik diklasifikasi sebagai buruk)
+- **Error Seimbang**: Tidak ada bias signifikan terhadap salah satu kelas
 
-**Business Impact of Errors:**
-- **FP Impact**: Overestimating quality may affect customer satisfaction
-- **FN Impact**: Underestimating quality results dalam revenue loss
-- **Mitigation Strategy**: Confidence thresholds dapat diimplementasikan untuk uncertain predictions
+**Dampak Bisnis dari Error:**
+- **Dampak FP**: Overestimating kualitas dapat mempengaruhi kepuasan pelanggan
+- **Dampak FN**: Underestimating kualitas mengakibatkan kerugian pendapatan
+- **Strategi Mitigasi**: Threshold confidence dapat diimplementasikan untuk prediksi yang tidak pasti
 
-### Feature Importance Analysis
+### Analisis Pentingnya Fitur
 
-**Top Contributing Features (berdasarkan Random Forest feature importance):**
+**Fitur Kontributor Teratas (berdasarkan feature importance Random Forest):**
 
-1. **Sweetness** (23.4%): Primary quality indicator
-2. **Juiciness** (19.7%): Secondary quality determinant  
-3. **Crunchiness** (18.2%): Texture quality factor
-4. **Acidity** (15.1%): Flavor balance component
-5. **Size** (12.3%): Physical characteristic
-6. **Ripeness** (7.8%): Maturity indicator
-7. **Weight** (3.5%): Least discriminative feature
+1. **Sweetness** (23.4%): Indikator kualitas utama
+2. **Juiciness** (19.7%): Penentu kualitas sekunder  
+3. **Crunchiness** (18.2%): Faktor kualitas tekstur
+4. **Acidity** (15.1%): Komponen keseimbangan rasa
+5. **Size** (12.3%): Karakteristik fisik
+6. **Ripeness** (7.8%): Indikator kematangan
+7. **Weight** (3.5%): Fitur paling kurang diskriminatif
 
-**Business Insights:**
-- **Sensory Attributes Dominate**: Taste-related features more predictive than physical dimensions
-- **Quality Focus Areas**: Prioritize sweetness dan juiciness dalam production optimization
-- **Measurement Strategy**: Invest dalam accurate sensory assessment tools
+**Wawasan Bisnis:**
+- **Dominasi Atribut Sensori**: Fitur terkait rasa lebih prediktif dibanding dimensi fisik
+- **Area Fokus Kualitas**: Prioritaskan sweetness dan juiciness dalam optimasi produksi
+- **Strategi Pengukuran**: Investasi dalam alat penilaian sensori yang akurat
 
-### Model Selection Justification
+### Justifikasi Pemilihan Model
 
-**Final Model Selection: K-Nearest Neighbors**
+**Pemilihan Model Final: Support Vector Machine**
 
-**Selection Criteria:**
-1. **Performance Superiority**: Highest test accuracy (90.1%)
-2. **Generalization Capability**: Reasonable training-test gap
-3. **Implementation Simplicity**: Straightforward deployment requirements
-4. **Interpretability**: Clear decision-making process
-5. **Robustness**: Consistent performance across validation sets
+**Kriteria Pemilihan:**
+1. **Superioritas Performa**: Akurasi test tertinggi (88.9%)
+2. **Kemampuan Generalisasi**: Performa stabil pada data validasi
+3. **Robustness**: Konsisten di berbagai kondisi data
+4. **Efektivitas Kernel**: RBF kernel menangani kompleksitas data dengan baik
+5. **Deployment Readiness**: Siap untuk implementasi produksi
 
-**Comparative Advantages over Alternatives:**
-- **vs Extra Trees**: Slightly better accuracy dengan simpler model
-- **vs Random Forest**: Superior performance dengan faster inference
-- **vs SVM**: Better accuracy dengan more intuitive interpretation
-- **vs Naive Bayes**: Significantly better performance (90.1% vs 48.9%)
+**Keunggulan Komparatif dibanding Alternatif:**
+- **vs KNN**: Slightly better accuracy dengan stabilitas yang superior
+- **vs Extra Trees**: Performa yang lebih baik dengan kompleksitas model yang reasonable
+- **vs Random Forest**: Akurasi superior dengan waktu inferensi yang lebih cepat
+- **vs Naive Bayes**: Performa yang jauh lebih baik (88.9% vs 48.9%)
 
-### Deployment Considerations
+### Pertimbangan Deployment
 
-**Production Readiness Assessment:**
-- **Accuracy Threshold**: 90.1% exceeds minimum requirement (85%)
-- **Computational Requirements**: Moderate memory usage, acceptable inference time
-- **Scalability**: Can handle real-time classification requests
-- **Maintenance**: Straightforward model updates dengan new training data
+**Penilaian Kesiapan Produksi:**
+- **Threshold Akurasi**: 88.9% melebihi requirement minimum (85%)
+- **Kebutuhan Komputasi**: Penggunaan memori moderat, waktu inferensi acceptable
+- **Skalabilitas**: Dapat menangani request klasifikasi real-time
+- **Maintenance**: Update model yang straightforward dengan data training baru
 
-**Quality Assurance Recommendations:**
-- **Regular Retraining**: Monthly model updates dengan fresh data
-- **Performance Monitoring**: Continuous accuracy tracking dalam production
-- **Confidence Scoring**: Implement prediction confidence untuk uncertain cases
-- **Human Override**: Manual review capability untuk borderline predictions
+**Rekomendasi Quality Assurance:**
+- **Retraining Berkala**: Update model bulanan dengan data fresh
+- **Monitoring Performa**: Tracking akurasi kontinyu dalam produksi
+- **Confidence Scoring**: Implementasi prediction confidence untuk kasus yang tidak pasti
+- **Human Override**: Kemampuan review manual untuk prediksi borderline
 
 **Expected Business Value:**
-- **Cost Savings**: Reduced manual sorting labor costs
-- **Quality Improvement**: Consistent classification standards
-- **Revenue Enhancement**: Optimal pricing berdasarkan accurate quality assessment
-- **Customer Satisfaction**: Improved product consistency
+- **Penghematan Biaya**: Reduksi biaya tenaga kerja sortir manual
+- **Peningkatan Kualitas**: Standar klasifikasi yang konsisten
+- **Revenue Enhancement**: Pricing optimal berdasarkan penilaian kualitas yang akurat
+- **Kepuasan Pelanggan**: Konsistensi produk yang lebih baik
 
 ---
 
