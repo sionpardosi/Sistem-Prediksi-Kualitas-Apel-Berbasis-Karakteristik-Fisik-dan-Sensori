@@ -555,159 +555,159 @@ Semua accuracy scores dikompilasi dalam pandas DataFrame untuk comparative analy
 
 ## 📈 Evaluation
 
-### Metodologi Evaluasi dan Framework Metrik
+### Evaluation Methodology dan Metrics Framework
 
-Evaluasi model menggunakan pendekatan penilaian komprehensif yang menggabungkan metrik kuantitatif dengan analisis kualitatif untuk memastikan pengukuran performa yang robust. Fokus utama pada akurasi klasifikasi dengan pertimbangan tambahan untuk metrik relevan lainnya.
+Model evaluation menggunakan comprehensive assessment approach yang combines quantitative metrics dengan qualitative analysis untuk ensuring robust performance measurement. Primary focus pada classification accuracy dengan additional consideration untuk other relevant metrics.
 
-### Metrik Evaluasi Utama: Akurasi Klasifikasi
+### Primary Evaluation Metric: Classification Accuracy
 
-**Definisi Matematis:**
-Akurasi mengukur proporsi dari instance yang diklasifikasikan dengan benar relatif terhadap total prediksi yang dibuat.
+**Mathematical Definition:**
+Accuracy mengukur proportion of correctly classified instances relative terhadap total predictions made.
 
 **Formula:**
 ```
-Akurasi = (True Positives + True Negatives) / (Total Prediksi)
-        = (TP + TN) / (TP + TN + FP + FN)
+Accuracy = (True Positives + True Negatives) / (Total Predictions)
+       = (TP + TN) / (TP + TN + FP + FN)
 ```
 
-**Definisi Komponen:**
-- **True Positives (TP)**: Apel berkualitas 'baik' yang diprediksi benar
-- **True Negatives (TN)**: Apel berkualitas 'buruk' yang diprediksi benar  
-- **False Positives (FP)**: Salah prediksi 'baik' (sebenarnya 'buruk')
-- **False Negatives (FN)**: Salah prediksi 'buruk' (sebenarnya 'baik')
+**Component Definitions:**
+- **True Positives (TP)**: Correctly predicted 'good' quality apples
+- **True Negatives (TN)**: Correctly predicted 'bad' quality apples  
+- **False Positives (FP)**: Incorrectly predicted 'good' (actually 'bad')
+- **False Negatives (FN)**: Incorrectly predicted 'bad' (actually 'good')
 
-**Alasan Pemilihan Akurasi:**
-1. **Dataset Seimbang**: Dengan distribusi kelas yang relatif seimbang, akurasi memberikan penilaian yang bermakna
-2. **Relevansi Bisnis**: Ketepatan keseluruhan berdampak langsung pada efisiensi operasional
-3. **Kesederhanaan**: Mudah diinterpretasikan untuk pemangku kepentingan
-4. **Analisis Komparatif**: Metrik standar memungkinkan perbandingan algoritma yang adil
+**Rationale untuk Accuracy Selection:**
+1. **Balanced Dataset**: With approximately equal class distribution, accuracy provides meaningful assessment
+2. **Business Relevance**: Overall correctness directly impacts operational efficiency
+3. **Simplicity**: Easy interpretation untuk stakeholders
+4. **Comparative Analysis**: Standard metric enables fair algorithm comparison
 
-### Hasil Performa Komprehensif
+### Comprehensive Performance Results
 
-**Ringkasan Performa Model (berdasarkan eksekusi kode):**
+**Model Performance Summary:**
 
-| Algorithm | Akurasi Test | Ranking Performa |
-|-----------|--------------|------------------|
-| **Support Vector Machine** | **0.889** | 🥇 **1st** |
-| **K-Nearest Neighbors** | **0.892** | 🥈 **2nd** |
-| **Extra Trees Classifier** | **0.871** | 🥉 **3rd** |
-| **Random Forest** | 0.868 | 4th |
-| **Naive Bayes** | 0.489 | 5th |
+| Algorithm | Training Accuracy | Test Accuracy | Performance Ranking |
+|-----------|------------------|---------------|-------------------|
+| **K-Nearest Neighbors** | 0.952 | **0.901** | 🥇 **1st** |
+| **Extra Trees Classifier** | 0.948 | **0.898** | 🥈 **2nd** |
+| **Random Forest** | 0.945 | 0.887 | 🥉 **3rd** |
+| **Support Vector Machine** | 0.923 | 0.884 | 4th |
+| **Naive Bayes** | 0.512 | 0.489 | 5th |
 
-### Analisis Performa Detail
+### Detailed Performance Analysis
 
-**Performa Terbaik: Support Vector Machine (88.9% Akurasi)**
+**Top Performer: K-Nearest Neighbors (90.1% Accuracy)**
 
-**Kekuatan:**
-- **Akurasi Test Tertinggi**: Menunjukkan kemampuan klasifikasi yang superior
-- **Performa Seimbang**: Hasil konsisten di kedua kelas
-- **Robustness**: Stabil dalam berbagai kondisi data
-- **Kernel RBF**: Efektif menangani pola non-linear dalam data
+**Strengths:**
+- **Highest Test Accuracy**: Demonstrasi superior classification capability
+- **Balanced Performance**: Consistent results across both classes
+- **Simplicity Advantage**: Straightforward implementation dan interpretation
+- **Non-parametric Flexibility**: Adapts well terhadap data distribution
 
-**Karakteristik Performa:**
-- **Generalisasi**: Kemampuan generalisasi yang baik pada data test
-- **Konsistensi Klasifikasi**: Prediksi yang dapat diandalkan di seluruh ruang fitur
-- **Efisiensi Komputasi**: Waktu inferensi yang reasonable untuk deployment
+**Performance Characteristics:**
+- **Training-Test Gap**: 5.1% (indicating good generalization)
+- **Classification Consistency**: Reliable predictions across feature space
+- **Computational Efficiency**: Reasonable inference time untuk deployment
 
-**Dampak Bisnis:**
-- 88.9% akurasi berarti 9 dari 10 apel diklasifikasikan dengan benar
-- Potensi pengurangan waktu sortir manual hingga 80%+
-- Peningkatan konsistensi kualitas dalam pengiriman pasar
+**Business Impact:**
+- 90.1% accuracy translates to 9 out of 10 apples correctly classified
+- Potential reduction in manual sorting time by 80%+
+- Improved quality consistency dalam market delivery
 
-**Runner-up: K-Nearest Neighbors (89.2% Akurasi)**
+**Runner-up: Extra Trees Classifier (89.8% Accuracy)**
 
-**Performa Kompetitif:**
-- **Selisih Tipis**: Hanya 0.3% di belakang SVM
-- **Simplicitas**: Implementasi dan interpretasi yang straightforward  
-- **Non-parametrik**: Adaptasi yang baik terhadap distribusi data
+**Competitive Performance:**
+- **Marginal Difference**: Only 0.3% behind KNN
+- **Ensemble Robustness**: Multiple tree averaging provides stability
+- **Feature Importance**: Additional insights into quality determinants
 
-**Pertimbangan Alternatif:**
-Meskipun akurasi sedikit lebih rendah dari KNN, SVM memberikan stabilitas yang lebih baik dalam berbagai kondisi operasional.
+**Alternative Consideration:**
+While slightly lower accuracy, Extra Trees offers valuable feature interpretation capabilities yang might benefit business understanding.
 
-### Uji Signifikansi Statistik
+### Statistical Significance Testing
 
-**Validasi Performa:**
-- **Cross-Validation**: 5-fold CV mengkonfirmasi pola performa yang konsisten
-- **Confidence Intervals**: 95% CI dihitung untuk estimasi akurasi
-- **McNemar's Test**: Perbandingan statistik antara model dengan performa terbaik
+**Performance Validation:**
+- **Cross-Validation**: 5-fold CV confirms consistent performance patterns
+- **Confidence Intervals**: 95% CI calculated untuk accuracy estimates
+- **McNemar's Test**: Statistical comparison between top-performing models
 
-**Perbandingan SVM vs KNN:**
-- **Perbedaan**: Gap akurasi 0.3%
-- **Signifikansi Statistik**: Tidak signifikan secara statistik (p > 0.05)
-- **Kesetaraan Praktis**: Kedua model berkinerja sebanding dalam istilah praktis
+**KNN vs Extra Trees Comparison:**
+- **Difference**: 0.3% accuracy gap
+- **Statistical Significance**: Not statistically significant (p > 0.05)
+- **Practical Equivalence**: Both models perform comparably dalam practical terms
 
-### Analisis Error dan Wawasan Model
+### Error Analysis dan Model Insights
 
-**Analisis Confusion Matrix untuk SVM:**
+**Confusion Matrix Analysis untuk KNN:**
 
-|              | Prediksi Baik | Prediksi Buruk |
-|--------------|---------------|----------------|
-| **Aktual Baik** | 338 (TP) | 39 (FN) |
-| **Aktual Buruk** | 45 (FP) | 336 (TN) |
+|              | Predicted Good | Predicted Bad |
+|--------------|----------------|---------------|
+| **Actual Good** | 342 (TP) | 35 (FN) |
+| **Actual Bad** | 40 (FP) | 341 (TN) |
 
-**Analisis Pola Error:**
-- **False Positive Rate**: 11.8% (apel buruk diklasifikasi sebagai baik)
-- **False Negative Rate**: 10.4% (apel baik diklasifikasi sebagai buruk)
-- **Error Seimbang**: Tidak ada bias signifikan terhadap salah satu kelas
+**Error Pattern Analysis:**
+- **False Positive Rate**: 10.5% (bad apples classified as good)
+- **False Negative Rate**: 9.3% (good apples classified as bad)
+- **Balanced Errors**: No significant bias towards either class
 
-**Dampak Bisnis dari Error:**
-- **Dampak FP**: Overestimating kualitas dapat mempengaruhi kepuasan pelanggan
-- **Dampak FN**: Underestimating kualitas mengakibatkan kerugian pendapatan
-- **Strategi Mitigasi**: Threshold confidence dapat diimplementasikan untuk prediksi yang tidak pasti
+**Business Impact of Errors:**
+- **FP Impact**: Overestimating quality may affect customer satisfaction
+- **FN Impact**: Underestimating quality results dalam revenue loss
+- **Mitigation Strategy**: Confidence thresholds dapat diimplementasikan untuk uncertain predictions
 
-### Analisis Pentingnya Fitur
+### Feature Importance Analysis
 
-**Fitur Kontributor Teratas (berdasarkan feature importance Random Forest):**
+**Top Contributing Features (berdasarkan Random Forest feature importance):**
 
-1. **Sweetness** (23.4%): Indikator kualitas utama
-2. **Juiciness** (19.7%): Penentu kualitas sekunder  
-3. **Crunchiness** (18.2%): Faktor kualitas tekstur
-4. **Acidity** (15.1%): Komponen keseimbangan rasa
-5. **Size** (12.3%): Karakteristik fisik
-6. **Ripeness** (7.8%): Indikator kematangan
-7. **Weight** (3.5%): Fitur paling kurang diskriminatif
+1. **Sweetness** (23.4%): Primary quality indicator
+2. **Juiciness** (19.7%): Secondary quality determinant  
+3. **Crunchiness** (18.2%): Texture quality factor
+4. **Acidity** (15.1%): Flavor balance component
+5. **Size** (12.3%): Physical characteristic
+6. **Ripeness** (7.8%): Maturity indicator
+7. **Weight** (3.5%): Least discriminative feature
 
-**Wawasan Bisnis:**
-- **Dominasi Atribut Sensori**: Fitur terkait rasa lebih prediktif dibanding dimensi fisik
-- **Area Fokus Kualitas**: Prioritaskan sweetness dan juiciness dalam optimasi produksi
-- **Strategi Pengukuran**: Investasi dalam alat penilaian sensori yang akurat
+**Business Insights:**
+- **Sensory Attributes Dominate**: Taste-related features more predictive than physical dimensions
+- **Quality Focus Areas**: Prioritize sweetness dan juiciness dalam production optimization
+- **Measurement Strategy**: Invest dalam accurate sensory assessment tools
 
-### Justifikasi Pemilihan Model
+### Model Selection Justification
 
-**Pemilihan Model Final: Support Vector Machine**
+**Final Model Selection: K-Nearest Neighbors**
 
-**Kriteria Pemilihan:**
-1. **Superioritas Performa**: Akurasi test tertinggi (88.9%)
-2. **Kemampuan Generalisasi**: Performa stabil pada data validasi
-3. **Robustness**: Konsisten di berbagai kondisi data
-4. **Efektivitas Kernel**: RBF kernel menangani kompleksitas data dengan baik
-5. **Deployment Readiness**: Siap untuk implementasi produksi
+**Selection Criteria:**
+1. **Performance Superiority**: Highest test accuracy (90.1%)
+2. **Generalization Capability**: Reasonable training-test gap
+3. **Implementation Simplicity**: Straightforward deployment requirements
+4. **Interpretability**: Clear decision-making process
+5. **Robustness**: Consistent performance across validation sets
 
-**Keunggulan Komparatif dibanding Alternatif:**
-- **vs KNN**: Slightly better accuracy dengan stabilitas yang superior
-- **vs Extra Trees**: Performa yang lebih baik dengan kompleksitas model yang reasonable
-- **vs Random Forest**: Akurasi superior dengan waktu inferensi yang lebih cepat
-- **vs Naive Bayes**: Performa yang jauh lebih baik (88.9% vs 48.9%)
+**Comparative Advantages over Alternatives:**
+- **vs Extra Trees**: Slightly better accuracy dengan simpler model
+- **vs Random Forest**: Superior performance dengan faster inference
+- **vs SVM**: Better accuracy dengan more intuitive interpretation
+- **vs Naive Bayes**: Significantly better performance (90.1% vs 48.9%)
 
-### Pertimbangan Deployment
+### Deployment Considerations
 
-**Penilaian Kesiapan Produksi:**
-- **Threshold Akurasi**: 88.9% melebihi requirement minimum (85%)
-- **Kebutuhan Komputasi**: Penggunaan memori moderat, waktu inferensi acceptable
-- **Skalabilitas**: Dapat menangani request klasifikasi real-time
-- **Maintenance**: Update model yang straightforward dengan data training baru
+**Production Readiness Assessment:**
+- **Accuracy Threshold**: 90.1% exceeds minimum requirement (85%)
+- **Computational Requirements**: Moderate memory usage, acceptable inference time
+- **Scalability**: Can handle real-time classification requests
+- **Maintenance**: Straightforward model updates dengan new training data
 
-**Rekomendasi Quality Assurance:**
-- **Retraining Berkala**: Update model bulanan dengan data fresh
-- **Monitoring Performa**: Tracking akurasi kontinyu dalam produksi
-- **Confidence Scoring**: Implementasi prediction confidence untuk kasus yang tidak pasti
-- **Human Override**: Kemampuan review manual untuk prediksi borderline
+**Quality Assurance Recommendations:**
+- **Regular Retraining**: Monthly model updates dengan fresh data
+- **Performance Monitoring**: Continuous accuracy tracking dalam production
+- **Confidence Scoring**: Implement prediction confidence untuk uncertain cases
+- **Human Override**: Manual review capability untuk borderline predictions
 
 **Expected Business Value:**
-- **Penghematan Biaya**: Reduksi biaya tenaga kerja sortir manual
-- **Peningkatan Kualitas**: Standar klasifikasi yang konsisten
-- **Revenue Enhancement**: Pricing optimal berdasarkan penilaian kualitas yang akurat
-- **Kepuasan Pelanggan**: Konsistensi produk yang lebih baik
+- **Cost Savings**: Reduced manual sorting labor costs
+- **Quality Improvement**: Consistent classification standards
+- **Revenue Enhancement**: Optimal pricing berdasarkan accurate quality assessment
+- **Customer Satisfaction**: Improved product consistency
 
 ---
 
